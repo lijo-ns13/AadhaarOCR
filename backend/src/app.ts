@@ -3,6 +3,8 @@ import cors from "cors";
 
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+// router
+import ocrRoutes from "./routes/ocr.routes";
 dotenv.config();
 
 const app: Application = express();
@@ -18,5 +20,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors(corsOption));
+
+app.use("/", ocrRoutes);
 
 export default app;

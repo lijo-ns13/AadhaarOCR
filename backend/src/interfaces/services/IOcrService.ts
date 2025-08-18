@@ -1,8 +1,5 @@
-import { OcrResultDTO } from "../dtos/OcrDTO";
+import { OcrResultDTO } from "../../dtos/OcrDTO";
 
 export interface IOcrService {
-  process(
-    frontImage: Express.Multer.File,
-    backImage: Express.Multer.File
-  ): Promise<OcrResultDTO>;
+  process(frontBuffer: Buffer, backBuffer: Buffer): Promise<OcrResultDTO>;
 }

@@ -3,11 +3,11 @@ import AadhaarUpload from "../components/AadhaarUpload";
 export default function AadhaarPage() {
   const handleUpload = async (frontFile: File, backFile: File) => {
     const formData = new FormData();
-    formData.append("aadhaarFront", frontFile);
-    formData.append("aadhaarBack", backFile);
+    formData.append("front", frontFile);
+    formData.append("back", backFile);
 
     try {
-      const res = await fetch("http://localhost:5000/upload-aadhaar", {
+      const res = await fetch("http://localhost:5000/ocr", {
         method: "POST",
         body: formData,
       });

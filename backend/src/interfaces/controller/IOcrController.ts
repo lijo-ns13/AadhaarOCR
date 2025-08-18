@@ -1,5 +1,7 @@
-import { Request, Response } from "express";
+// src/interfaces/IOcrController.ts
+import { Response } from "express";
+import { AadhaarFilesRequest } from "../../types/express";
 
 export interface IOcrController {
-  generateOCRData(req: Request, res: Response): Promise<void>;
+  generateOCRData(req: AadhaarFilesRequest, res: Response): Promise<void>;
 }

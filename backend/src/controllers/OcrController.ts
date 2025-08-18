@@ -1,9 +1,13 @@
+// src/controllers/OcrController.ts
 import { injectable, inject } from "inversify";
-import { Request, Response } from "express";
-import { IOcrController } from "../interfaces/IOcrController";
+import { Response } from "express";
+
 import { handleControllerError } from "../utils/errorHandler";
-import { IOcrService } from "../services/IOcrService"; // service interface
-import TYPES from "../constants/types";
+
+import { TYPES } from "../di/types";
+import { AadhaarFilesRequest } from "../types/express";
+import { IOcrService } from "../interfaces/services/IOcrService";
+import { IOcrController } from "../interfaces/controller/IOcrController";
 
 @injectable()
 export class OcrController implements IOcrController {
@@ -11,16 +15,38 @@ export class OcrController implements IOcrController {
     @inject(TYPES.OcrService) private readonly ocrService: IOcrService
   ) {}
 
-  async generateOCRData(req: Request, res: Response): Promise<void> {
+  async generateOCRData(
+    req: AadhaarFilesRequest,
+    res: Response
+  ): Promise<void> {
     try {
-      const result = await this.ocrService.process(req.file); // assuming multer upload
+      const frontFile = req.files?.front?.[0];
+      const backFile = req.files?.back?.[0];
+
+      if (!frontFile || !backFile) {
+        res.status(400).json({
+          success: false,
+          message: "Both front and back Aadhaar images are required",
+        });
+        return;
+      }
+
+      const result = await this.ocrService.process(
+        frontFile.buffer,
+        backFile.buffer
+      );
+
       res.status(200).json({
         success: true,
-        message: "OCR data generated successfully",
+        message: "OCR data extracted successfully",
         data: result,
       });
-    } catch (error) {
-      handleControllerError(res, error, "Failed to generate OCR data");
+    } catch (error: any) {
+      // handleControllerError(res, error, "Failed to generate OCR data");
+      res.status(400).json({
+        success: false,
+        message: error.message || "Failed to generate OCR data",
+      });
     }
   }
 }
