@@ -10,12 +10,16 @@ export interface OcrResponse {
 }
 export const OcrGenerate = async (FormData: FormData): Promise<OcrResponse> => {
   try {
-    const response = await axios.post(`http://localhost:5000/ocr`, FormData, {
-      withCredentials: true,
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const response = await axios.post(
+      `https://aadhaarocr-33do.onrender.com/ocr`,
+      FormData,
+      {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
     return response.data.data;
   } catch (error) {
     throw handleApiError(error, "create-image");
