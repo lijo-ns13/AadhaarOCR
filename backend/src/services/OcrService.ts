@@ -27,45 +27,35 @@ export class OcrService implements IOcrService {
       rawText: fullText,
     };
 
-    // ✅ Aadhaar Number (Full, normalized)
+    // Aadhaar Number
     const aadhaarMatch = fullText.match(/\d{4}\s?\d{4}\s?\d{4}/);
-    if (aadhaarMatch) {
+    if (aadhaarMatch)
       result.aadhaarNumber = aadhaarMatch[0].replace(/\s+/g, " ");
-    }
 
-    // ✅ DOB
+    // DOB
     const dobMatch = fullText.match(/\d{2}\/\d{2}\/\d{4}/);
-    if (dobMatch) {
-      result.dob = dobMatch[0];
-    }
+    if (dobMatch) result.dob = dobMatch[0];
 
-    // ✅ Gender
-    if (/male/i.test(fullText)) {
-      result.gender = "Male";
-    } else if (/female/i.test(fullText)) {
-      result.gender = "Female";
-    }
+    // Gender
+    if (/male/i.test(fullText)) result.gender = "Male";
+    else if (/female/i.test(fullText)) result.gender = "Female";
 
-    // ✅ Name (take line before DOB on front side)
+    // Name (line before DOB on front side)
     const lines = frontText
       .split("\n")
       .map((l) => l.trim())
       .filter((l) => l.length > 2);
-
     const dobIndex = lines.findIndex((l) => /\d{2}\/\d{2}\/\d{4}/.test(l));
-    // ✅ Name (take line before DOB on front side)
     if (dobIndex > 0) {
       let rawName = lines[dobIndex - 1];
-
       let cleanedName = rawName
-        .replace(/[^a-zA-Z\s.]/g, "") // remove junk
-        .replace(/([a-z])([A-Z][a-z])/g, "$1 $2") // split when Capital followed by lowercase (word start)
-        .replace(/([A-Z]{2,})([A-Z][a-z])/g, "$1 $2") // split big blocks of caps
-        .replace(/(.)\1{2,}/g, "$1") // collapse repeated chars
-        .replace(/\s{2,}/g, " ") // trim extra spaces
+        .replace(/[^a-zA-Z\s.]/g, "")
+        .replace(/([a-z])([A-Z][a-z])/g, "$1 $2")
+        .replace(/([A-Z]{2,})([A-Z][a-z])/g, "$1 $2")
+        .replace(/(.)\1{2,}/g, "$1")
+        .replace(/\s{2,}/g, " ")
         .trim();
 
-      // Convert to Title Case
       cleanedName = cleanedName
         .toLowerCase()
         .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -73,41 +63,49 @@ export class OcrService implements IOcrService {
       result.name = cleanedName;
     }
 
-    // ✅ Address extraction (back side)
+    // Address (back side)
     const addressMatch = backText.match(
       /Address[:\s]*(.+?)(?=\d{4}\s?\d{4}\s?\d{4}|help@uidai\.gov\.in|www\.uidai\.gov\.in)/is
     );
-
     if (addressMatch) {
       let cleaned = addressMatch[1]
-        .replace(/[\|\=«»;:]/g, " ") // remove junk symbols
-        .replace(/\s{2,}/g, " ") // collapse multiple spaces
-        .replace(/\n+/g, ", ") // newlines → commas
-        .replace(/,\s*,/g, ",") // fix double commas
-        .replace(/\s+,/g, ",") // trim space before commas
+        .replace(/[\|\=«»;:]/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .replace(/\n+/g, ", ")
+        .replace(/,\s*,/g, ",")
+        .replace(/\s+,/g, ",")
         .trim();
 
-      // ✅ Stop at first valid 6-digit PINCODE
       const pinMatch = cleaned.match(/\b\d{6}\b/);
       if (pinMatch) {
         const pinIndex = cleaned.indexOf(pinMatch[0]);
         cleaned = cleaned.substring(0, pinIndex + 6).trim();
       }
 
-      // ✅ Fix common OCR mistakes
       cleaned = cleaned
         .replace(/\bne\s?\d?\b/gi, "Near")
         .replace(/\bT\s?P\s?/gi, "TP ")
         .replace(/\ba Gin gates\b/gi, "")
-        .replace(/\s{2,}/g, " ") // clean extra spaces again
+        .replace(/\s{2,}/g, " ")
         .trim();
 
       result.address = cleaned;
     }
 
-    // ✅ Validation
-    if (!result.aadhaarNumber) {
-      throw new Error("Uploaded document is not a valid Aadhaar card");
+    // ✅ Validation: throw error if any key field is missing
+    const missingFields: string[] = [];
+    if (!result.aadhaarNumber) missingFields.push("Aadhaar Number");
+    if (!result.name) missingFields.push("Name");
+    if (!result.dob) missingFields.push("DOB");
+    if (!result.gender) missingFields.push("Gender");
+    if (!result.address) missingFields.push("Address");
+
+    if (missingFields.length > 0) {
+      throw new Error(
+        `Incomplete Aadhaar data detected (${missingFields.join(
+          ", "
+        )}). Please provide proper Aadhaar card images.`
+      );
     }
 
     return result;
