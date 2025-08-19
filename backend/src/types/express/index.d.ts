@@ -1,14 +1,11 @@
-// src/types/express/index.d.ts
 import { Request } from "express";
 import { File } from "multer";
 
-export interface MulterFile extends File {
-  buffer: Buffer; // since memoryStorage
-}
+type AadhaarFiles = {
+  front?: File[];
+  back?: File[];
+};
 
-export interface AadhaarFilesRequest extends Request {
-  files?: {
-    front?: Express.Multer.File[];
-    back?: Express.Multer.File[];
-  };
-}
+export type AadhaarFilesRequest = Request & {
+  files?: AadhaarFiles;
+};

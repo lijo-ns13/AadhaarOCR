@@ -1,0 +1,1 @@
+{"version":3,"file":"ocrRepository.js","sourceRoot":"","sources":["../../src/repositories/ocrRepository.ts"],"names":[],"mappings":";;;;;;AAAA,oCAAoC;AACpC,gEAAqC;AAGrC,MAAa,aAAa;IACxB,KAAK,CAAC,WAAW,CAAC,MAAc;QAC9B,MAAM,EACJ,IAAI,EAAE,EAAE,IAAI,EAAE,GACf,GAAG,MAAM,sBAAS,CAAC,SAAS,CAAC,MAAM,EAAE,KAAK,CAAC,CAAC;QAC7C,OAAO,IAAI,CAAC;IACd,CAAC;CACF;AAPD,sCAOC"}
