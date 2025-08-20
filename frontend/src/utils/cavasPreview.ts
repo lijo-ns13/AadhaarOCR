@@ -7,28 +7,39 @@ export async function getCroppedImg(
   const scaleX = image.naturalWidth / image.width;
   const scaleY = image.naturalHeight / image.height;
 
-  canvas.width = crop.width;
-  canvas.height = crop.height;
+  // ✅ Use scaled width/height (important!)
+  const pixelWidth = Math.floor(crop.width * scaleX);
+  const pixelHeight = Math.floor(crop.height * scaleY);
+
+  canvas.width = pixelWidth;
+  canvas.height = pixelHeight;
 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("No canvas context");
 
   ctx.drawImage(
     image,
-    crop.x * scaleX,
-    crop.y * scaleY,
-    crop.width * scaleX,
-    crop.height * scaleY,
+    crop.x * scaleX, // start x
+    crop.y * scaleY, // start y
+    pixelWidth, // source width
+    pixelHeight, // source height
     0,
     0,
-    crop.width,
-    crop.height
+    pixelWidth, // destination width
+    pixelHeight // destination height
   );
 
-  return new Promise<File>((resolve) => {
-    canvas.toBlob((blob) => {
-      if (!blob) throw new Error("Canvas is empty");
-      resolve(new File([blob], fileName, { type: "image/jpeg" }));
-    }, "image/jpeg");
+  return new Promise<File>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Canvas is empty"));
+          return;
+        }
+        resolve(new File([blob], fileName, { type: "image/jpeg" }));
+      },
+      "image/jpeg",
+      0.95
+    ); // use 95% quality
   });
 }

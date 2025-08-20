@@ -37,8 +37,8 @@ export class OcrService implements IOcrService {
     if (dobMatch) result.dob = dobMatch[0];
 
     // Gender
-    if (/male/i.test(fullText)) result.gender = "Male";
-    else if (/female/i.test(fullText)) result.gender = "Female";
+    if (/\bfemale\b/i.test(fullText)) result.gender = "Female";
+    else if (/\bmale\b/i.test(fullText)) result.gender = "Male";
 
     // Name (line before DOB on front side)
     const lines = frontText
