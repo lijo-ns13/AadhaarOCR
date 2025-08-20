@@ -11,8 +11,7 @@ export interface OcrResponse {
 export const OcrGenerate = async (FormData: FormData): Promise<OcrResponse> => {
   try {
     const response = await axios.post(
-      // `https://aadhaarocr-33do.onrender.com/ocr`,
-      `http://localhost:5000/ocr`,
+      `https://aadhaarocr-33do.onrender.com/ocr`,
       FormData,
       {
         withCredentials: true,
