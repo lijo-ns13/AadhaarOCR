@@ -1,8 +1,9 @@
 import { useState, useRef } from "react";
-import { OcrGenerate, type OcrResponse } from "./services/OcrService";
+import { OcrGenerate } from "./services/OcrService";
 import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { getCroppedImg } from "./utils/cavasPreview";
+import type { OcrResponse } from "./types/OcrReponse";
 
 export default function App() {
   const [frontFile, setFrontFile] = useState<File | null>(null);
