@@ -102,7 +102,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-100 p-6">
       <div className="w-full max-w-2xl bg-white shadow-xl rounded-2xl p-6">
         <h1 className="text-3xl font-extrabold text-center bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-6">
-          Aadhaar OCR Generator
+          Aadhaar Data Extractor
         </h1>
 
         {/* Error */}

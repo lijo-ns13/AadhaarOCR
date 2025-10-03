@@ -1,21 +1,22 @@
 import { injectable, inject } from "inversify";
 import { TYPES } from "../di/types";
-import { IOcrRepository } from "../interfaces/repositories/IOcrRepository";
 import { IOcrService } from "../interfaces/services/IOcrService";
 import { OcrResultDTO } from "../dtos/OcrDTO";
+import Tesseract from "tesseract.js";
+import { ITesseractService } from "../interfaces/services/ITesseractService";
 
 @injectable()
 export class OcrService implements IOcrService {
   constructor(
-    @inject(TYPES.OcrRepository) private readonly ocrRepository: IOcrRepository
+    @inject(TYPES.TesseractService) private readonly _tesseractService: ITesseractService
   ) {}
 
   async process(
     frontBuffer: Buffer,
     backBuffer: Buffer
   ): Promise<OcrResultDTO> {
-    const frontText = await this.ocrRepository.extractText(frontBuffer);
-    const backText = await this.ocrRepository.extractText(backBuffer);
+    const frontText = await this._tesseractService.extractText(frontBuffer);
+    const backText = await this._tesseractService.extractText(backBuffer);
 
     const fullText = `${frontText}\n${backText}`;
     const result: OcrResultDTO = {
