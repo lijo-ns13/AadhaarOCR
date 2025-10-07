@@ -6,6 +6,9 @@ import { getCroppedImg } from "./utils/cavasPreview";
 import type { OcrResponse } from "./types/OcrReponse";
 
 export default function App() {
+  const [frontPreview, setFrontPreview] = useState<string | null>(null);
+  const [backPreview, setBackPreview] = useState<string | null>(null);
+
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const [backFile, setBackFile] = useState<File | null>(null);
   const [croppingFile, setCroppingFile] = useState<"front" | "back" | null>(
@@ -51,8 +54,14 @@ export default function App() {
         completedCrop,
         `${croppingFile}.jpg`
       );
-      if (croppingFile === "front") setFrontFile(croppedFile);
-      else setBackFile(croppedFile);
+
+      if (croppingFile === "front") {
+        setFrontFile(croppedFile);
+        setFrontPreview(URL.createObjectURL(croppedFile)); // ✅ update preview
+      } else {
+        setBackFile(croppedFile);
+        setBackPreview(URL.createObjectURL(croppedFile)); // ✅ update preview
+      }
     } catch (err) {
       setError("Failed to crop image");
       console.error(err);
@@ -88,8 +97,14 @@ export default function App() {
   const handleReset = () => {
     setFrontFile(null);
     setBackFile(null);
+    setFrontPreview(null);
+    setBackPreview(null);
     setData(null);
     setError(null);
+    setCroppingFile(null);
+    setCurrentFile(null);
+    setCompletedCrop(null);
+    setCrop({ unit: "%", width: 30, height: 30, x: 0, y: 0 });
   };
 
   const handleCopy = (text: string, label: string) => {
@@ -109,9 +124,8 @@ export default function App() {
         {error && (
           <p className="text-red-600 text-center mb-4 font-medium">{error}</p>
         )}
-
-        {/* File Inputs */}
         <div className="space-y-5">
+          {/* Front Image */}
           <div>
             <label className="block font-semibold mb-2 text-gray-700">
               Upload Front Image
@@ -125,13 +139,24 @@ export default function App() {
               }
               className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
             />
+            {frontPreview && (
+              <div className="mt-3 flex justify-center">
+                <img
+                  src={frontPreview}
+                  alt="Front Preview"
+                  className="w-full max-w-[300px] h-auto rounded shadow-md border"
+                  style={{ objectFit: "contain" }}
+                />
+              </div>
+            )}
             {frontFile && (
-              <p className="text-green-600 text-sm mt-2">
+              <p className="text-green-600 text-sm mt-2 text-center">
                 ✅ Front image cropped
               </p>
             )}
           </div>
 
+          {/* Back Image */}
           <div>
             <label className="block font-semibold mb-2 text-gray-700">
               Upload Back Image
@@ -145,8 +170,18 @@ export default function App() {
               }
               className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
             />
+            {backPreview && (
+              <div className="mt-3 flex justify-center">
+                <img
+                  src={backPreview}
+                  alt="Back Preview"
+                  className="w-full max-w-[300px] h-auto rounded shadow-md border"
+                  style={{ objectFit: "contain" }}
+                />
+              </div>
+            )}
             {backFile && (
-              <p className="text-green-600 text-sm mt-2">
+              <p className="text-green-600 text-sm mt-2 text-center">
                 ✅ Back image cropped
               </p>
             )}
@@ -177,11 +212,12 @@ export default function App() {
               <h2 className="text-lg font-semibold mb-3 text-center">
                 Crop {croppingFile === "front" ? "Front" : "Back"} Image
               </h2>
-              <div className="max-h-[70vh] overflow-auto">
+              <div className="max-h-[60vh] overflow-auto flex flex-col items-center">
                 <ReactCrop
                   crop={crop}
                   onChange={(c) => setCrop(c)}
                   onComplete={(c) => setCompletedCrop(c)}
+                  aspect={0} // free crop
                 >
                   <img
                     ref={imgRef}
@@ -190,6 +226,41 @@ export default function App() {
                     style={{ maxWidth: "100%" }}
                   />
                 </ReactCrop>
+
+                {/* Cropped preview */}
+                {completedCrop && imgRef.current && (
+                  <canvas
+                    style={{
+                      marginTop: "10px",
+                      border: "1px solid #ccc",
+                      width: completedCrop.width,
+                      height: completedCrop.height,
+                    }}
+                    ref={(canvas) => {
+                      if (!canvas) return;
+                      const ctx = canvas.getContext("2d");
+                      const scaleX =
+                        imgRef.current!.naturalWidth / imgRef.current!.width;
+                      const scaleY =
+                        imgRef.current!.naturalHeight / imgRef.current!.height;
+                      if (ctx && completedCrop.width && completedCrop.height) {
+                        canvas.width = completedCrop.width * scaleX;
+                        canvas.height = completedCrop.height * scaleY;
+                        ctx.drawImage(
+                          imgRef.current!,
+                          completedCrop.x * scaleX,
+                          completedCrop.y * scaleY,
+                          completedCrop.width * scaleX,
+                          completedCrop.height * scaleY,
+                          0,
+                          0,
+                          completedCrop.width * scaleX,
+                          completedCrop.height * scaleY
+                        );
+                      }
+                    }}
+                  />
+                )}
               </div>
 
               <div className="flex justify-center gap-3 mt-4">

@@ -7,39 +7,40 @@ export async function getCroppedImg(
   const scaleX = image.naturalWidth / image.width;
   const scaleY = image.naturalHeight / image.height;
 
-  // ✅ Use scaled width/height (important!)
   const pixelWidth = Math.floor(crop.width * scaleX);
   const pixelHeight = Math.floor(crop.height * scaleY);
 
-  canvas.width = pixelWidth;
-  canvas.height = pixelHeight;
+  // High-DPI support
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = pixelWidth * dpr;
+  canvas.height = pixelHeight * dpr;
 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("No canvas context");
 
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // scale for high-DPI
+  ctx.imageSmoothingQuality = "high";
+
   ctx.drawImage(
     image,
-    crop.x * scaleX, // start x
-    crop.y * scaleY, // start y
-    pixelWidth, // source width
-    pixelHeight, // source height
+    crop.x * scaleX,
+    crop.y * scaleY,
+    pixelWidth,
+    pixelHeight,
     0,
     0,
-    pixelWidth, // destination width
-    pixelHeight // destination height
+    pixelWidth,
+    pixelHeight
   );
 
   return new Promise<File>((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
-        if (!blob) {
-          reject(new Error("Canvas is empty"));
-          return;
-        }
+        if (!blob) return reject(new Error("Canvas is empty"));
         resolve(new File([blob], fileName, { type: "image/jpeg" }));
       },
       "image/jpeg",
       0.95
-    ); // use 95% quality
+    );
   });
 }
