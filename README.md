@@ -1,6 +1,6 @@
-# 🪪 Aadhaar OCR Data Extractor (MERN + TypeScript)
+# 🪪 Aadhaar OCR Data Extractor
 
-A full-stack **MERN (MongoDB, Express, React, Node.js)** application for extracting and displaying **Aadhaar card details** from uploaded images using **OCR (Optical Character Recognition)** technology.
+A full-stack  application for extracting and displaying **Aadhaar card details** from uploaded images using **OCR (Optical Character Recognition)** technology.
 
 ---
 
