@@ -115,3 +115,9 @@
   
 }
 
+// {
+//   "compilerOptions": {
+//     "esModuleInterop": true,
+//     "allowSyntheticDefaultImports": true
+//   }
+// }

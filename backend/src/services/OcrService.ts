@@ -2,111 +2,129 @@ import { injectable, inject } from "inversify";
 import { TYPES } from "../di/types";
 import { IOcrService } from "../interfaces/services/IOcrService";
 import { OcrResultDTO } from "../dtos/OcrDTO";
-import Tesseract from "tesseract.js";
 import { ITesseractService } from "../interfaces/services/ITesseractService";
+import sharp from "sharp";
 
 @injectable()
 export class OcrService implements IOcrService {
   constructor(
-    @inject(TYPES.TesseractService) private readonly _tesseractService: ITesseractService
+    @inject(TYPES.TesseractService)
+    private readonly _tesseractService: ITesseractService
   ) {}
 
+  async preprocess(buffer: Buffer): Promise<Buffer> {
+    return sharp(buffer)
+      .grayscale()
+      .normalize() // improves contrast
+      .threshold(150) // makes text sharper
+      .toBuffer();
+  }
   async process(
     frontBuffer: Buffer,
     backBuffer: Buffer
   ): Promise<OcrResultDTO> {
-    const frontText = await this._tesseractService.extractText(frontBuffer);
-    const backText = await this._tesseractService.extractText(backBuffer);
+    // Extract raw text
+    const frontText = await this._tesseractService.extractText(
+      await this.preprocess(frontBuffer)
+    );
+    const backText = await this._tesseractService.extractText(
+      await this.preprocess(backBuffer)
+    );
 
-    const fullText = `${frontText}\n${backText}`;
+    console.log("frontxt", frontText, "backtext", backText);
+    // Aadhaar number regex
+    const aadhaarRegex = /\b\d{4}\s?\d{4}\s?\d{4}\b/;
+    const frontAadhaar = frontText
+      .match(aadhaarRegex)?.[0]
+      ?.replace(/\s+/g, " ");
+    const backAadhaar = backText.match(aadhaarRegex)?.[0]?.replace(/\s+/g, " ");
+    console.log("aaahdrfront", frontAadhaar, "back", backAadhaar);
+    if (!frontAadhaar || !backAadhaar || frontAadhaar !== backAadhaar) {
+      throw new Error(
+        "Aadhaar numbers do not match or not found on both sides."
+      );
+    }
+
+    const fullText = frontText + "\n" + backText;
+
     const result: OcrResultDTO = {
+      aadhaarNumber: frontAadhaar,
       name: null,
       dob: null,
-      aadhaarNumber: null,
       gender: null,
       address: null,
       rawText: fullText,
     };
 
-    // Aadhaar Number
-    const aadhaarMatch = fullText.match(/\d{4}\s?\d{4}\s?\d{4}/);
-    if (aadhaarMatch)
-      result.aadhaarNumber = aadhaarMatch[0].replace(/\s+/g, " ");
-
-    // DOB
-    const dobMatch = fullText.match(/\d{2}\/\d{2}\/\d{4}/);
+    // Extract DOB
+    const dobMatch = frontText.match(/\b\d{2}\/\d{2}\/\d{4}\b/);
     if (dobMatch) result.dob = dobMatch[0];
 
-    // Gender
-    if (/\bfemale\b/i.test(fullText)) result.gender = "Female";
-    else if (/\bmale\b/i.test(fullText)) result.gender = "Male";
+    // Extract Gender
+    if (/\bfemale\b/i.test(frontText)) result.gender = "Female";
+    else if (/\bmale\b/i.test(frontText)) result.gender = "Male";
 
-    // Name (line before DOB on front side)
+    // Extract Name (line before DOB or line with all uppercase letters)
     const lines = frontText
       .split("\n")
       .map((l) => l.trim())
-      .filter((l) => l.length > 2);
-    const dobIndex = lines.findIndex((l) => /\d{2}\/\d{2}\/\d{4}/.test(l));
-    if (dobIndex > 0) {
-      let rawName = lines[dobIndex - 1];
-      let cleanedName = rawName
-        .replace(/[^a-zA-Z\s.]/g, "")
-        .replace(/([a-z])([A-Z][a-z])/g, "$1 $2")
-        .replace(/([A-Z]{2,})([A-Z][a-z])/g, "$1 $2")
-        .replace(/(.)\1{2,}/g, "$1")
-        .replace(/\s{2,}/g, " ")
-        .trim();
+      .filter(Boolean);
 
-      cleanedName = cleanedName
-        .toLowerCase()
-        .replace(/\b\w/g, (c) => c.toUpperCase());
-
-      result.name = cleanedName;
+    let nameCandidate = "";
+    if (dobMatch) {
+      const dobIndex = lines.findIndex((l) => l.includes(result.dob!));
+      if (dobIndex > 0) nameCandidate = lines[dobIndex - 1];
     }
 
-    // Address (back side)
-    const addressMatch = backText.match(
+    // Fallback: look for line with uppercase letters and letters only
+    if (!nameCandidate) {
+      const upperLines = lines.filter(
+        (l) => /^[A-Z\s.]+$/.test(l) && l.length > 2
+      );
+      if (upperLines.length) nameCandidate = upperLines[0];
+    }
+
+    // Clean name
+    if (nameCandidate) {
+      result.name = nameCandidate
+        .replace(/[^a-zA-Z\s.]/g, "")
+        .replace(/\s{2,}/g, " ")
+        .trim()
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    // Extract Address from back side
+    const addrMatch = backText.match(
       /Address[:\s]*(.+?)(?=\d{4}\s?\d{4}\s?\d{4}|help@uidai\.gov\.in|www\.uidai\.gov\.in)/is
     );
-    if (addressMatch) {
-      let cleaned = addressMatch[1]
+    if (addrMatch) {
+      let addr = addrMatch[1]
         .replace(/[\|\=«»;:]/g, " ")
         .replace(/\s{2,}/g, " ")
         .replace(/\n+/g, ", ")
         .replace(/,\s*,/g, ",")
-        .replace(/\s+,/g, ",")
         .trim();
 
-      const pinMatch = cleaned.match(/\b\d{6}\b/);
+      // Keep pin code in address
+      const pinMatch = addr.match(/\b\d{6}\b/);
       if (pinMatch) {
-        const pinIndex = cleaned.indexOf(pinMatch[0]);
-        cleaned = cleaned.substring(0, pinIndex + 6).trim();
+        const pinIndex = addr.indexOf(pinMatch[0]);
+        addr = addr.substring(0, pinIndex + 6).trim();
       }
 
-      cleaned = cleaned
-        .replace(/\bne\s?\d?\b/gi, "Near")
-        .replace(/\bT\s?P\s?/gi, "TP ")
-        .replace(/\ba Gin gates\b/gi, "")
-        .replace(/\s{2,}/g, " ")
-        .trim();
-
-      result.address = cleaned;
+      result.address = addr;
     }
 
-    // ✅ Validation: throw error if any key field is missing
+    // Validation
     const missingFields: string[] = [];
-    if (!result.aadhaarNumber) missingFields.push("Aadhaar Number");
     if (!result.name) missingFields.push("Name");
     if (!result.dob) missingFields.push("DOB");
     if (!result.gender) missingFields.push("Gender");
     if (!result.address) missingFields.push("Address");
 
-    if (missingFields.length > 0) {
-      throw new Error(
-        `Incomplete Aadhaar data detected (${missingFields.join(
-          ", "
-        )}). Please provide proper Aadhaar card images.`
-      );
+    if (missingFields.length) {
+      console.warn("OCR Warning: Missing fields", missingFields.join(", "));
     }
 
     return result;
